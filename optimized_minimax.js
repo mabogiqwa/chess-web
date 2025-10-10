@@ -1,7 +1,7 @@
 class OptimizedMinimaxChessAI {
     constructor(depth = 2) {
         this.depth = depth;
-        this.timeLimit = 500; // 500ms time limit for move calculation
+        this.timeLimit = 500;
         this.PIECE_VALUES = {
             '♟': 10,   // Black Pawn
             '♞': 30,   // Black Knight
@@ -22,7 +22,6 @@ class OptimizedMinimaxChessAI {
         console.time('Total Move Calculation');
         const startTime = performance.now();
         
-        // Detailed performance logging
         const moveGenerationStart = performance.now();
         const moves = this.generateMoves(board, true);
         const moveGenerationTime = performance.now() - moveGenerationStart;
@@ -32,7 +31,6 @@ class OptimizedMinimaxChessAI {
 
         let bestMove = null;
         
-        // Iterative Deepening with Time Limit
         for (let currentDepth = 1; currentDepth <= this.depth; currentDepth++) {
             try {
                 const result = this.iterativeDeepeningSearch(
@@ -45,13 +43,11 @@ class OptimizedMinimaxChessAI {
                     bestMove = result.move;
                 }
                 
-                // Check if time limit exceeded
                 const currentTime = performance.now();
                 if (currentTime - startTime > this.timeLimit) {
                     break;
                 }
             } catch (error) {
-                // Time limit exceeded
                 break;
             }
         }
@@ -61,17 +57,14 @@ class OptimizedMinimaxChessAI {
     }
 
     iterativeDeepeningSearch(board, depth, startTime) {
-        // Generate and sort moves by initial heuristic
         const moves = this.generateAndSortMoves(board, true);
 
         let bestMove = null;
         let bestScore = -Infinity;
         
-        // Limit search to prevent excessive computation
-        const movesToEvaluate = moves.slice(0, 5); // Evaluate top 5 moves
+        const movesToEvaluate = moves.slice(0, 5);
         
         for (const move of movesToEvaluate) {
-            // Check time limit
             if (performance.now() - startTime > this.timeLimit) {
                 throw new Error('Time limit exceeded');
             }
@@ -98,7 +91,6 @@ class OptimizedMinimaxChessAI {
     generateAndSortMoves(board, isBlackTurn) {
         const moves = this.generateMoves(board, isBlackTurn);
         
-        // Sort moves by initial heuristic
         return moves.sort((a, b) => {
             const scoreA = this.evaluateMove(board, a);
             const scoreB = this.evaluateMove(board, b);
@@ -113,7 +105,6 @@ class OptimizedMinimaxChessAI {
             for (let fromCol = 0; fromCol < 8; fromCol++) {
                 const piece = board[fromRow][fromCol];
                 
-                // Check if piece belongs to the current player
                 const isPlayerPiece = isBlackTurn 
                     ? this.isBlackPiece(piece)
                     : this.isWhitePiece(piece);
@@ -143,20 +134,17 @@ class OptimizedMinimaxChessAI {
         
         let score = 0;
         
-        // Capture bonus
         const capturedPiece = board[toRow][toCol];
         if (capturedPiece !== ' ') {
             score += Math.abs(this.PIECE_VALUES[capturedPiece]) * 2;
         }
         
-        // Positional bonus
         score += this.getPositionalBonus(move.piece, toRow, toCol);
         
         return score;
     }
 
     minimax(board, depth, isMaximizingPlayer, alpha, beta) {
-        // Base case with quicker evaluation
         if (depth === 0) {
             return { 
                 score: this.quickEvaluateBoard(board),
@@ -189,7 +177,7 @@ class OptimizedMinimaxChessAI {
 
                 alpha = Math.max(alpha, evaluation.score);
                 if (beta <= alpha) {
-                    break; // Beta cut-off
+                    break;
                 }
             }
             return { score: maxEval, move: bestMove };
@@ -207,7 +195,7 @@ class OptimizedMinimaxChessAI {
 
                 beta = Math.min(beta, evaluation.score);
                 if (beta <= alpha) {
-                    break; // Alpha cut-off
+                    break;
                 }
             }
             return { score: minEval, move: bestMove };
@@ -215,10 +203,8 @@ class OptimizedMinimaxChessAI {
     }
 
     applyMove(board, move) {
-        // Create a deep copy of the board
         const newBoard = board.map(row => [...row]);
         
-        // Apply the move
         const [fromRow, fromCol] = move.from;
         const [toRow, toCol] = move.to;
         
@@ -236,7 +222,6 @@ class OptimizedMinimaxChessAI {
                 const piece = board[row][col];
                 
                 if (piece !== ' ') {
-                    // Simplified evaluation
                     score += this.PIECE_VALUES[piece];
                 }
             }
@@ -249,15 +234,10 @@ class OptimizedMinimaxChessAI {
         const centerBonus = this.getCenterControlBonus(row, col);
         
         switch (piece) {
-            case '♟': // Black Pawn
-                return centerBonus + (7 - row) * 2;
-            case '♙': // White Pawn
-                return centerBonus + row * 2;
-            case '♞': // Black Knight
-            case '♘': // White Knight
-                return centerBonus + 5;
-            default:
-                return centerBonus;
+            case '♟': return centerBonus + (7 - row) * 2;
+            case '♙': return centerBonus + row * 2;
+            case '♞': case '♘': return centerBonus + 5;
+            default: return centerBonus;
         }
     }
 
@@ -271,12 +251,10 @@ class OptimizedMinimaxChessAI {
         return 0;
     }
 
-    // Move Validation Methods
     isValidMove(board, fromRow, fromCol, toRow, toCol) {
         const piece = board[fromRow][fromCol];
         const targetSquare = board[toRow][toCol];
         
-        // Can't move to a square with a piece of the same color
         const isBlackPiece = this.isBlackPiece(piece);
         const isTargetBlack = this.isBlackPiece(targetSquare);
         const isTargetWhite = this.isWhitePiece(targetSquare);
@@ -286,37 +264,27 @@ class OptimizedMinimaxChessAI {
             return false;
         }
         
-        // Piece-specific move validation
         switch (piece) {
             case '♟': return this.validateBlackPawnMove(board, fromRow, fromCol, toRow, toCol);
             case '♙': return this.validateWhitePawnMove(board, fromRow, fromCol, toRow, toCol);
-            case '♞': return this.validateKnightMove(fromRow, fromCol, toRow, toCol);
-            case '♘': return this.validateKnightMove(fromRow, fromCol, toRow, toCol);
-            case '♜': return this.validateRookMove(board, fromRow, fromCol, toRow, toCol);
-            case '♖': return this.validateRookMove(board, fromRow, fromCol, toRow, toCol);
-            case '♝': return this.validateBishopMove(board, fromRow, fromCol, toRow, toCol);
-            case '♗': return this.validateBishopMove(board, fromRow, fromCol, toRow, toCol);
-            case '♛': return this.validateQueenMove(board, fromRow, fromCol, toRow, toCol);
-            case '♕': return this.validateQueenMove(board, fromRow, fromCol, toRow, toCol);
-            case '♚': return this.validateKingMove(fromRow, fromCol, toRow, toCol);
-            case '♔': return this.validateKingMove(fromRow, fromCol, toRow, toCol);
+            case '♞': case '♘': return this.validateKnightMove(fromRow, fromCol, toRow, toCol);
+            case '♜': case '♖': return this.validateRookMove(board, fromRow, fromCol, toRow, toCol);
+            case '♝': case '♗': return this.validateBishopMove(board, fromRow, fromCol, toRow, toCol);
+            case '♛': case '♕': return this.validateQueenMove(board, fromRow, fromCol, toRow, toCol);
+            case '♚': case '♔': return this.validateKingMove(fromRow, fromCol, toRow, toCol);
             default: return false;
         }
     }
 
-    // Pawn Move Validations
     validateBlackPawnMove(board, fromRow, fromCol, toRow, toCol) {
         const rowDiff = toRow - fromRow;
         const colDiff = Math.abs(fromCol - toCol);
         
-        // Standard move forward
         if (fromCol === toCol && rowDiff === 1 && board[toRow][toCol] === ' ') return true;
         
-        // Initial two-square move
         if (fromCol === toCol && fromRow === 1 && rowDiff === 2 && 
             board[fromRow + 1][toCol] === ' ' && board[toRow][toCol] === ' ') return true;
         
-        // Capture diagonally
         if (colDiff === 1 && rowDiff === 1 && this.isWhitePiece(board[toRow][toCol])) return true;
         
         return false;
@@ -326,20 +294,16 @@ class OptimizedMinimaxChessAI {
         const rowDiff = fromRow - toRow;
         const colDiff = Math.abs(fromCol - toCol);
         
-        // Standard move forward
         if (fromCol === toCol && rowDiff === 1 && board[toRow][toCol] === ' ') return true;
         
-        // Initial two-square move
         if (fromCol === toCol && fromRow === 6 && rowDiff === 2 && 
             board[fromRow - 1][toCol] === ' ' && board[toRow][toCol] === ' ') return true;
         
-        // Capture diagonally
         if (colDiff === 1 && rowDiff === 1 && this.isBlackPiece(board[toRow][toCol])) return true;
         
         return false;
     }
 
-    // Other Move Validations (Knight, Rook, Bishop, Queen, King)
     validateKnightMove(fromRow, fromCol, toRow, toCol) {
         const rowDiff = Math.abs(fromRow - toRow);
         const colDiff = Math.abs(fromCol - toCol);
@@ -364,7 +328,7 @@ class OptimizedMinimaxChessAI {
     validateKingMove(fromRow, fromCol, toRow, toCol) {
         const rowDiff = Math.abs(fromRow - toRow);
         const colDiff = Math.abs(fromCol - toCol);
-        return rowDiff <= 1 && colDiff <= 1;
+        return rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0);
     }
 
     isPathClear(board, fromRow, fromCol, toRow, toCol) {
@@ -383,12 +347,11 @@ class OptimizedMinimaxChessAI {
         return true;
     }
 
-    // Utility methods
     isBlackPiece(piece) {
         return ['♟', '♞', '♝', '♜', '♛', '♚'].includes(piece);
     }
 
     isWhitePiece(piece) {
-        return ['♙', '♖', '♘', '♗', '♕', '♔'].includes(piece);
+        return ['♙', '♘', '♗', '♖', '♕', '♔'].includes(piece);
     }
 }
