@@ -1,14 +1,107 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Chess Game</title>
+    <meta charset="UTF-8">
+    <title>Chess</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styling/styles.css">
 </head>
 <body>
-    <div id="status">Your turn (White)</div>
-    <div id="chessboard"></div>
-    <script src="chess agents/optimized_minimax.js"></script>
-    <script src="chess game/chessGame.js"></script>
+
+<div class="game-wrapper">
+
+    <!-- ===== Board column ===== -->
+    <div class="board-area">
+
+        <!-- Black player strip -->
+        <div class="player-strip">
+            <div class="player-avatar">♚</div>
+            <div>
+                <div class="player-name">Stockfish JS</div>
+                <div class="player-rating" id="ai-rating">~800 ELO</div>
+            </div>
+            <div class="captured-pieces" id="white-captured"></div>
+            <div class="material-diff"   id="black-material-adv"></div>
+        </div>
+
+        <!-- Chessboard -->
+        <div class="board-container">
+            <div id="chessboard"></div>
+        </div>
+
+        <!-- White player strip -->
+        <div class="player-strip">
+            <div class="player-avatar">♔</div>
+            <div>
+                <div class="player-name">You</div>
+                <div class="player-rating">Human</div>
+            </div>
+            <div class="captured-pieces" id="black-captured"></div>
+            <div class="material-diff"   id="white-material-adv"></div>
+        </div>
+
+    </div>
+
+    <!-- ===== Side panel ===== -->
+    <div class="side-panel">
+
+        <!-- Status -->
+        <div class="status-box">
+            <div class="status-indicator" id="status-indicator">
+                <div class="dot-indicator" id="status-dot"></div>
+                <span id="status-text">Your turn</span>
+            </div>
+        </div>
+
+        <!-- Difficulty -->
+        <div class="diff-box">
+            <div class="diff-title">Difficulty</div>
+            <div class="diff-options">
+                <button class="diff-btn active" onclick="setDifficulty(1, this)">Easy</button>
+                <button class="diff-btn"        onclick="setDifficulty(2, this)">Med</button>
+                <button class="diff-btn"        onclick="setDifficulty(3, this)">Hard</button>
+                <button class="diff-btn"        onclick="setDifficulty(4, this)">Max</button>
+            </div>
+        </div>
+
+        <!-- Move list -->
+        <div class="move-list-box">
+            <div class="move-list-title">Moves</div>
+            <div id="move-list"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="buttons">
+            <button class="btn btn-primary"   onclick="game.newGame()">New Game</button>
+            <button class="btn btn-secondary" onclick="game.flipBoard()">Flip Board</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===== Game-over overlay ===== -->
+<div class="game-over-overlay" id="game-over-overlay">
+    <div class="game-over-card">
+        <div class="game-over-icon"   id="game-over-icon">🏆</div>
+        <div class="game-over-result" id="game-over-result">White Wins!</div>
+        <div class="game-over-reason" id="game-over-reason">by Checkmate</div>
+        <button class="btn btn-primary" onclick="game.newGame()">Play Again</button>
+    </div>
+</div>
+
+<!-- ===== Pawn promotion modal ===== -->
+<div class="promo-modal" id="promo-modal">
+    <div class="promo-card">
+        <h3>Promote Pawn</h3>
+        <div class="promo-options" id="promo-options"></div>
+    </div>
+</div>
+
+<!-- Scripts: AI must load before the game controller -->
+<script src="chess agents/optimized_minimax.js"></script>
+<script src="chess game/chessGame.js"></script>
+
 </body>
 </html>

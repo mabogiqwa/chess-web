@@ -1,357 +1,274 @@
+/**
+ * optimized_minimax.js
+ * Enhanced chess AI using minimax with alpha-beta pruning,
+ * piece-square tables, and MVV-LVA move ordering.
+ */
 class OptimizedMinimaxChessAI {
     constructor(depth = 2) {
         this.depth = depth;
-        this.timeLimit = 500;
-        this.PIECE_VALUES = {
-            '♟': 10,   // Black Pawn
-            '♞': 30,   // Black Knight
-            '♝': 30,   // Black Bishop
-            '♜': 50,   // Black Rook
-            '♛': 90,   // Black Queen
-            '♚': 900,  // Black King
-            '♙': -10,  // White Pawn
-            '♘': -30,  // White Knight
-            '♗': -30,  // White Bishop
-            '♖': -50,  // White Rook
-            '♕': -90,  // White Queen
-            '♔': -900  // White King
+
+        // Material values in centipawns
+        this.PIECE_VAL = {
+            '♟': 100,  '♞': 320,  '♝': 330,  '♜': 500,  '♛': 900,  '♚': 20000,
+            '♙': -100, '♘': -320, '♗': -330, '♖': -500, '♕': -900, '♔': -20000
         };
+
+        // Piece-square tables (from black's perspective; mirrored for white)
+        this.PST = {
+            pawn: [
+                [ 0,  0,  0,  0,  0,  0,  0,  0],
+                [50, 50, 50, 50, 50, 50, 50, 50],
+                [10, 10, 20, 30, 30, 20, 10, 10],
+                [ 5,  5, 10, 25, 25, 10,  5,  5],
+                [ 0,  0,  0, 20, 20,  0,  0,  0],
+                [ 5, -5,-10,  0,  0,-10, -5,  5],
+                [ 5, 10, 10,-20,-20, 10, 10,  5],
+                [ 0,  0,  0,  0,  0,  0,  0,  0]
+            ],
+            knight: [
+                [-50,-40,-30,-30,-30,-30,-40,-50],
+                [-40,-20,  0,  0,  0,  0,-20,-40],
+                [-30,  0, 10, 15, 15, 10,  0,-30],
+                [-30,  5, 15, 20, 20, 15,  5,-30],
+                [-30,  0, 15, 20, 20, 15,  0,-30],
+                [-30,  5, 10, 15, 15, 10,  5,-30],
+                [-40,-20,  0,  5,  5,  0,-20,-40],
+                [-50,-40,-30,-30,-30,-30,-40,-50]
+            ],
+            bishop: [
+                [-20,-10,-10,-10,-10,-10,-10,-20],
+                [-10,  0,  0,  0,  0,  0,  0,-10],
+                [-10,  0,  5, 10, 10,  5,  0,-10],
+                [-10,  5,  5, 10, 10,  5,  5,-10],
+                [-10,  0, 10, 10, 10, 10,  0,-10],
+                [-10, 10, 10, 10, 10, 10, 10,-10],
+                [-10,  5,  0,  0,  0,  0,  5,-10],
+                [-20,-10,-10,-10,-10,-10,-10,-20]
+            ],
+            rook: [
+                [ 0,  0,  0,  0,  0,  0,  0,  0],
+                [ 5, 10, 10, 10, 10, 10, 10,  5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [-5,  0,  0,  0,  0,  0,  0, -5],
+                [ 0,  0,  0,  5,  5,  0,  0,  0]
+            ],
+            queen: [
+                [-20,-10,-10, -5, -5,-10,-10,-20],
+                [-10,  0,  0,  0,  0,  0,  0,-10],
+                [-10,  0,  5,  5,  5,  5,  0,-10],
+                [ -5,  0,  5,  5,  5,  5,  0, -5],
+                [  0,  0,  5,  5,  5,  5,  0, -5],
+                [-10,  5,  5,  5,  5,  5,  0,-10],
+                [-10,  0,  5,  0,  0,  0,  0,-10],
+                [-20,-10,-10, -5, -5,-10,-10,-20]
+            ],
+            king_mid: [
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-30,-40,-40,-50,-50,-40,-40,-30],
+                [-20,-30,-30,-40,-40,-30,-30,-20],
+                [-10,-20,-20,-20,-20,-20,-20,-10],
+                [ 20, 20,  0,  0,  0,  0, 20, 20],
+                [ 20, 30, 10,  0,  0, 10, 30, 20]
+            ]
+        };
+
+        this.BLACK_PIECES = new Set(['♟','♞','♝','♜','♛','♚']);
+        this.WHITE_PIECES = new Set(['♙','♘','♗','♖','♕','♔']);
     }
+
+    // ------------------------------------------------------------------ //
+    //  Public API
+    // ------------------------------------------------------------------ //
 
     findBestMove(board) {
-        console.time('Total Move Calculation');
-        const startTime = performance.now();
-        
-        const moveGenerationStart = performance.now();
-        const moves = this.generateMoves(board, true);
-        const moveGenerationTime = performance.now() - moveGenerationStart;
-        
-        console.log(`Moves Generated: ${moves.length}`);
-        console.log(`Move Generation Time: ${moveGenerationTime}ms`);
-
-        let bestMove = null;
-        
-        for (let currentDepth = 1; currentDepth <= this.depth; currentDepth++) {
-            try {
-                const result = this.iterativeDeepeningSearch(
-                    board, 
-                    currentDepth, 
-                    startTime
-                );
-                
-                if (result) {
-                    bestMove = result.move;
-                }
-                
-                const currentTime = performance.now();
-                if (currentTime - startTime > this.timeLimit) {
-                    break;
-                }
-            } catch (error) {
-                break;
-            }
+        let best = null;
+        for (let d = 1; d <= this.depth; d++) {
+            const result = this.minimax(board, d, true, -Infinity, Infinity);
+            if (result.move) best = result.move;
         }
-        
-        console.timeEnd('Total Move Calculation');
-        return bestMove;
+        return best;
     }
 
-    iterativeDeepeningSearch(board, depth, startTime) {
-        const moves = this.generateAndSortMoves(board, true);
+    // ------------------------------------------------------------------ //
+    //  Helpers
+    // ------------------------------------------------------------------ //
 
-        let bestMove = null;
-        let bestScore = -Infinity;
-        
-        const movesToEvaluate = moves.slice(0, 5);
-        
-        for (const move of movesToEvaluate) {
-            if (performance.now() - startTime > this.timeLimit) {
-                throw new Error('Time limit exceeded');
-            }
-            
-            const newBoard = this.applyMove(board, move);
-            
-            const evaluation = this.minimax(
-                newBoard, 
-                depth - 1, 
-                false, 
-                -Infinity, 
-                Infinity
-            );
-            
-            if (evaluation.score > bestScore) {
-                bestScore = evaluation.score;
-                bestMove = move;
-            }
+    isBlackPiece(p) { return this.BLACK_PIECES.has(p); }
+    isWhitePiece(p) { return this.WHITE_PIECES.has(p); }
+
+    getPST(piece, row, col) {
+        const isBlack = this.isBlackPiece(piece);
+        const r = isBlack ? row : 7 - row;
+        const sign = isBlack ? 1 : -1;
+        switch (piece) {
+            case '♟': case '♙': return sign * this.PST.pawn[r][col];
+            case '♞': case '♘': return sign * this.PST.knight[r][col];
+            case '♝': case '♗': return sign * this.PST.bishop[r][col];
+            case '♜': case '♖': return sign * this.PST.rook[r][col];
+            case '♛': case '♕': return sign * this.PST.queen[r][col];
+            case '♚': case '♔': return sign * this.PST.king_mid[r][col];
+            default: return 0;
         }
-        
-        return { move: bestMove, score: bestScore };
     }
 
-    generateAndSortMoves(board, isBlackTurn) {
-        const moves = this.generateMoves(board, isBlackTurn);
-        
-        return moves.sort((a, b) => {
-            const scoreA = this.evaluateMove(board, a);
-            const scoreB = this.evaluateMove(board, b);
-            return isBlackTurn ? scoreB - scoreA : scoreA - scoreB;
-        });
+    evaluateBoard(board) {
+        let score = 0;
+        for (let r = 0; r < 8; r++)
+            for (let c = 0; c < 8; c++) {
+                const p = board[r][c];
+                if (p !== ' ') score += this.PIECE_VAL[p] + this.getPST(p, r, c);
+            }
+        return score;
     }
+
+    // ------------------------------------------------------------------ //
+    //  Move generation
+    // ------------------------------------------------------------------ //
 
     generateMoves(board, isBlackTurn) {
         const moves = [];
-        
-        for (let fromRow = 0; fromRow < 8; fromRow++) {
-            for (let fromCol = 0; fromCol < 8; fromCol++) {
-                const piece = board[fromRow][fromCol];
-                
-                const isPlayerPiece = isBlackTurn 
-                    ? this.isBlackPiece(piece)
-                    : this.isWhitePiece(piece);
-                
-                if (isPlayerPiece) {
-                    for (let toRow = 0; toRow < 8; toRow++) {
-                        for (let toCol = 0; toCol < 8; toCol++) {
-                            if (this.isValidMove(board, fromRow, fromCol, toRow, toCol)) {
-                                moves.push({
-                                    from: [fromRow, fromCol],
-                                    to: [toRow, toCol],
-                                    piece: piece
-                                });
-                            }
-                        }
-                    }
+        for (let fr = 0; fr < 8; fr++)
+            for (let fc = 0; fc < 8; fc++) {
+                const p = board[fr][fc];
+                if (isBlackTurn ? this.isBlackPiece(p) : this.isWhitePiece(p)) {
+                    for (let tr = 0; tr < 8; tr++)
+                        for (let tc = 0; tc < 8; tc++)
+                            if (this.isValidMove(board, fr, fc, tr, tc))
+                                moves.push({ from:[fr,fc], to:[tr,tc], piece:p });
                 }
             }
-        }
-        
-        return moves;
-    }
 
-    evaluateMove(board, move) {
-        const [fromRow, fromCol] = move.from;
-        const [toRow, toCol] = move.to;
-        
-        let score = 0;
-        
-        const capturedPiece = board[toRow][toCol];
-        if (capturedPiece !== ' ') {
-            score += Math.abs(this.PIECE_VALUES[capturedPiece]) * 2;
-        }
-        
-        score += this.getPositionalBonus(move.piece, toRow, toCol);
-        
-        return score;
-    }
-
-    minimax(board, depth, isMaximizingPlayer, alpha, beta) {
-        if (depth === 0) {
-            return { 
-                score: this.quickEvaluateBoard(board),
-                move: null
-            };
-        }
-
-        const moves = this.generateMoves(board, isMaximizingPlayer);
-
-        if (moves.length === 0) {
-            return { 
-                score: this.quickEvaluateBoard(board),
-                move: null
-            };
-        }
-
-        let bestMove = null;
-        
-        if (isMaximizingPlayer) {
-            let maxEval = -Infinity;
-            for (const move of moves) {
-                const newBoard = this.applyMove(board, move);
-                
-                const evaluation = this.minimax(newBoard, depth - 1, false, alpha, beta);
-                
-                if (evaluation.score > maxEval) {
-                    maxEval = evaluation.score;
-                    bestMove = move;
-                }
-
-                alpha = Math.max(alpha, evaluation.score);
-                if (beta <= alpha) {
-                    break;
-                }
-            }
-            return { score: maxEval, move: bestMove };
-        } else {
-            let minEval = Infinity;
-            for (const move of moves) {
-                const newBoard = this.applyMove(board, move);
-                
-                const evaluation = this.minimax(newBoard, depth - 1, true, alpha, beta);
-                
-                if (evaluation.score < minEval) {
-                    minEval = evaluation.score;
-                    bestMove = move;
-                }
-
-                beta = Math.min(beta, evaluation.score);
-                if (beta <= alpha) {
-                    break;
-                }
-            }
-            return { score: minEval, move: bestMove };
-        }
+        // MVV-LVA: prioritise high-value captures
+        return moves.sort((a, b) => {
+            const ca = board[a.to[0]][a.to[1]];
+            const cb = board[b.to[0]][b.to[1]];
+            const va = ca !== ' ' ? Math.abs(this.PIECE_VAL[ca]) : 0;
+            const vb = cb !== ' ' ? Math.abs(this.PIECE_VAL[cb]) : 0;
+            return vb - va;
+        });
     }
 
     applyMove(board, move) {
-        const newBoard = board.map(row => [...row]);
-        
-        const [fromRow, fromCol] = move.from;
-        const [toRow, toCol] = move.to;
-        
-        newBoard[toRow][toCol] = newBoard[fromRow][fromCol];
-        newBoard[fromRow][fromCol] = ' ';
-        
-        return newBoard;
+        const nb = board.map(r => [...r]);
+        nb[move.to[0]][move.to[1]] = nb[move.from[0]][move.from[1]];
+        nb[move.from[0]][move.from[1]] = ' ';
+        // Auto-promote pawns to queen for search purposes
+        if (nb[move.to[0]][move.to[1]] === '♟' && move.to[0] === 7) nb[move.to[0]][move.to[1]] = '♛';
+        if (nb[move.to[0]][move.to[1]] === '♙' && move.to[0] === 0) nb[move.to[0]][move.to[1]] = '♕';
+        return nb;
     }
 
-    quickEvaluateBoard(board) {
-        let score = 0;
-        
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const piece = board[row][col];
-                
-                if (piece !== ' ') {
-                    score += this.PIECE_VALUES[piece];
-                }
+    // ------------------------------------------------------------------ //
+    //  Minimax with alpha-beta pruning
+    // ------------------------------------------------------------------ //
+
+    minimax(board, depth, isMaximising, alpha, beta) {
+        if (depth === 0) return { score: this.evaluateBoard(board) };
+
+        const moves = this.generateMoves(board, isMaximising);
+        if (!moves.length)  return { score: this.evaluateBoard(board) };
+
+        let bestMove = null;
+
+        if (isMaximising) {
+            let maxScore = -Infinity;
+            for (const move of moves) {
+                const nb = this.applyMove(board, move);
+                const { score } = this.minimax(nb, depth - 1, false, alpha, beta);
+                if (score > maxScore) { maxScore = score; bestMove = move; }
+                alpha = Math.max(alpha, score);
+                if (beta <= alpha) break;
             }
-        }
-        
-        return score;
-    }
-
-    getPositionalBonus(piece, row, col) {
-        const centerBonus = this.getCenterControlBonus(row, col);
-        
-        switch (piece) {
-            case '♟': return centerBonus + (7 - row) * 2;
-            case '♙': return centerBonus + row * 2;
-            case '♞': case '♘': return centerBonus + 5;
-            default: return centerBonus;
+            return { score: maxScore, move: bestMove };
+        } else {
+            let minScore = Infinity;
+            for (const move of moves) {
+                const nb = this.applyMove(board, move);
+                const { score } = this.minimax(nb, depth - 1, true, alpha, beta);
+                if (score < minScore) { minScore = score; bestMove = move; }
+                beta = Math.min(beta, score);
+                if (beta <= alpha) break;
+            }
+            return { score: minScore, move: bestMove };
         }
     }
 
-    getCenterControlBonus(row, col) {
-        const centerRows = [3, 4];
-        const centerCols = [3, 4];
-        
-        if (centerRows.includes(row) && centerCols.includes(col)) {
-            return 10;
-        }
-        return 0;
-    }
+    // ------------------------------------------------------------------ //
+    //  Move validation
+    // ------------------------------------------------------------------ //
 
-    isValidMove(board, fromRow, fromCol, toRow, toCol) {
-        const piece = board[fromRow][fromCol];
-        const targetSquare = board[toRow][toCol];
-        
-        const isBlackPiece = this.isBlackPiece(piece);
-        const isTargetBlack = this.isBlackPiece(targetSquare);
-        const isTargetWhite = this.isWhitePiece(targetSquare);
-        
-        if ((isBlackPiece && isTargetBlack) || 
-            (!isBlackPiece && isTargetWhite)) {
-            return false;
-        }
-        
-        switch (piece) {
-            case '♟': return this.validateBlackPawnMove(board, fromRow, fromCol, toRow, toCol);
-            case '♙': return this.validateWhitePawnMove(board, fromRow, fromCol, toRow, toCol);
-            case '♞': case '♘': return this.validateKnightMove(fromRow, fromCol, toRow, toCol);
-            case '♜': case '♖': return this.validateRookMove(board, fromRow, fromCol, toRow, toCol);
-            case '♝': case '♗': return this.validateBishopMove(board, fromRow, fromCol, toRow, toCol);
-            case '♛': case '♕': return this.validateQueenMove(board, fromRow, fromCol, toRow, toCol);
-            case '♚': case '♔': return this.validateKingMove(fromRow, fromCol, toRow, toCol);
+    isValidMove(board, fr, fc, tr, tc) {
+        if (fr === tr && fc === tc) return false;
+        const p = board[fr][fc];
+        if (!p || p === ' ') return false;
+        const t = board[tr][tc];
+        if (t !== ' ' && this.isBlackPiece(p) === this.isBlackPiece(t)) return false;
+
+        switch (p) {
+            case '♟': return this.validateBlackPawnMove(board, fr, fc, tr, tc);
+            case '♙': return this.validateWhitePawnMove(board, fr, fc, tr, tc);
+            case '♞': case '♘': return this.validateKnightMove(fr, fc, tr, tc);
+            case '♜': case '♖': return this.validateRookMove(board, fr, fc, tr, tc);
+            case '♝': case '♗': return this.validateBishopMove(board, fr, fc, tr, tc);
+            case '♛': case '♕': return this.validateQueenMove(board, fr, fc, tr, tc);
+            case '♚': case '♔': return this.validateKingMove(fr, fc, tr, tc);
             default: return false;
         }
     }
 
-    validateBlackPawnMove(board, fromRow, fromCol, toRow, toCol) {
-        const rowDiff = toRow - fromRow;
-        const colDiff = Math.abs(fromCol - toCol);
-        
-        if (fromCol === toCol && rowDiff === 1 && board[toRow][toCol] === ' ') return true;
-        
-        if (fromCol === toCol && fromRow === 1 && rowDiff === 2 && 
-            board[fromRow + 1][toCol] === ' ' && board[toRow][toCol] === ' ') return true;
-        
-        if (colDiff === 1 && rowDiff === 1 && this.isWhitePiece(board[toRow][toCol])) return true;
-        
+    validateBlackPawnMove(board, fr, fc, tr, tc) {
+        const rd = tr - fr, cd = Math.abs(fc - tc);
+        if (fc === tc && rd === 1 && board[tr][tc] === ' ') return true;
+        if (fc === tc && fr === 1 && rd === 2 && board[fr+1][tc] === ' ' && board[tr][tc] === ' ') return true;
+        if (cd === 1 && rd === 1 && board[tr][tc] !== ' ' && this.isWhitePiece(board[tr][tc])) return true;
         return false;
     }
 
-    validateWhitePawnMove(board, fromRow, fromCol, toRow, toCol) {
-        const rowDiff = fromRow - toRow;
-        const colDiff = Math.abs(fromCol - toCol);
-        
-        if (fromCol === toCol && rowDiff === 1 && board[toRow][toCol] === ' ') return true;
-        
-        if (fromCol === toCol && fromRow === 6 && rowDiff === 2 && 
-            board[fromRow - 1][toCol] === ' ' && board[toRow][toCol] === ' ') return true;
-        
-        if (colDiff === 1 && rowDiff === 1 && this.isBlackPiece(board[toRow][toCol])) return true;
-        
+    validateWhitePawnMove(board, fr, fc, tr, tc) {
+        const rd = fr - tr, cd = Math.abs(fc - tc);
+        if (fc === tc && rd === 1 && board[tr][tc] === ' ') return true;
+        if (fc === tc && fr === 6 && rd === 2 && board[fr-1][tc] === ' ' && board[tr][tc] === ' ') return true;
+        if (cd === 1 && rd === 1 && board[tr][tc] !== ' ' && this.isBlackPiece(board[tr][tc])) return true;
         return false;
     }
 
-    validateKnightMove(fromRow, fromCol, toRow, toCol) {
-        const rowDiff = Math.abs(fromRow - toRow);
-        const colDiff = Math.abs(fromCol - toCol);
-        return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+    validateKnightMove(fr, fc, tr, tc) {
+        const rd = Math.abs(fr - tr), cd = Math.abs(fc - tc);
+        return (rd === 2 && cd === 1) || (rd === 1 && cd === 2);
     }
 
-    validateRookMove(board, fromRow, fromCol, toRow, toCol) {
-        if (fromRow !== toRow && fromCol !== toCol) return false;
-        return this.isPathClear(board, fromRow, fromCol, toRow, toCol);
+    validateRookMove(board, fr, fc, tr, tc) {
+        if (fr !== tr && fc !== tc) return false;
+        return this.isPathClear(board, fr, fc, tr, tc);
     }
 
-    validateBishopMove(board, fromRow, fromCol, toRow, toCol) {
-        if (Math.abs(fromRow - toRow) !== Math.abs(fromCol - toCol)) return false;
-        return this.isPathClear(board, fromRow, fromCol, toRow, toCol);
+    validateBishopMove(board, fr, fc, tr, tc) {
+        if (Math.abs(fr - tr) !== Math.abs(fc - tc)) return false;
+        return this.isPathClear(board, fr, fc, tr, tc);
     }
 
-    validateQueenMove(board, fromRow, fromCol, toRow, toCol) {
-        return this.validateRookMove(board, fromRow, fromCol, toRow, toCol) || 
-               this.validateBishopMove(board, fromRow, fromCol, toRow, toCol);
+    validateQueenMove(board, fr, fc, tr, tc) {
+        return this.validateRookMove(board, fr, fc, tr, tc) ||
+               this.validateBishopMove(board, fr, fc, tr, tc);
     }
 
-    validateKingMove(fromRow, fromCol, toRow, toCol) {
-        const rowDiff = Math.abs(fromRow - toRow);
-        const colDiff = Math.abs(fromCol - toCol);
-        return rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0);
+    validateKingMove(fr, fc, tr, tc) {
+        return Math.abs(fr - tr) <= 1 && Math.abs(fc - tc) <= 1;
     }
 
-    isPathClear(board, fromRow, fromCol, toRow, toCol) {
-        const rowStep = fromRow < toRow ? 1 : fromRow > toRow ? -1 : 0;
-        const colStep = fromCol < toCol ? 1 : fromCol > toCol ? -1 : 0;
-        
-        let currentRow = fromRow + rowStep;
-        let currentCol = fromCol + colStep;
-        
-        while (currentRow !== toRow || currentCol !== toCol) {
-            if (board[currentRow][currentCol] !== ' ') return false;
-            currentRow += rowStep;
-            currentCol += colStep;
+    isPathClear(board, fr, fc, tr, tc) {
+        const rs = fr < tr ? 1 : fr > tr ? -1 : 0;
+        const cs = fc < tc ? 1 : fc > tc ? -1 : 0;
+        let r = fr + rs, c = fc + cs;
+        while (r !== tr || c !== tc) {
+            if (board[r][c] !== ' ') return false;
+            r += rs; c += cs;
         }
-        
         return true;
-    }
-
-    isBlackPiece(piece) {
-        return ['♟', '♞', '♝', '♜', '♛', '♚'].includes(piece);
-    }
-
-    isWhitePiece(piece) {
-        return ['♙', '♘', '♗', '♖', '♕', '♔'].includes(piece);
     }
 }
