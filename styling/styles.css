@@ -399,3 +399,160 @@ body {
     .move-list-box   { display: none; }
     #chessboard      { width: min(95vw, 400px); height: min(95vw, 400px); }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Post-game Analysis Modal
+══════════════════════════════════════════════════════════════ */
+
+/* Wider, scrollable card for the analysis view */
+.analysis-card {
+    width: 400px;
+    max-width: 96vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    text-align: left;
+    scrollbar-width: thin;
+}
+.analysis-card::-webkit-scrollbar       { width: 4px; }
+.analysis-card::-webkit-scrollbar-track { background: transparent; }
+.analysis-card::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Two-column player grid */
+.analysis-grid {
+    display: flex;
+    margin-bottom: 16px;
+}
+.analysis-divider {
+    width: 1px;
+    background: var(--border);
+    margin: 0 14px;
+    flex-shrink: 0;
+}
+.analysis-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+/* Player header row */
+.analysis-player-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+.analysis-avatar { font-size: 20px; line-height: 1; }
+
+/* Big accuracy number */
+.acc-score {
+    font-size: 30px;
+    font-weight: 700;
+    font-family: 'Noto Serif', serif;
+    line-height: 1;
+    color: var(--green);
+}
+.acc-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-top: -4px;
+}
+
+/* Accuracy progress bar */
+.acc-bar-track {
+    height: 5px;
+    background: var(--panel2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.acc-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    background: var(--green);
+    /* transition applied via JS after first paint */
+}
+
+/* Stat rows (blunders / mistakes / inaccuracies) */
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.stat-row b { color: var(--text); margin-left: auto; }
+
+/* Fixed-width badge column */
+.class-badge {
+    display: inline-block;
+    width: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Classification legend strip */
+.analysis-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+    margin-bottom: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-item > span { font-weight: 700; font-size: 12px; }
+
+/* Move-by-move list */
+.amove-list {
+    max-height: 190px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.amove-list::-webkit-scrollbar       { width: 4px; }
+.amove-list::-webkit-scrollbar-track { background: transparent; }
+.amove-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.amove-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.amove-num {
+    color: var(--text-muted);
+    font-size: 11px;
+    width: 24px;
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 4px;
+}
+.amove-chip {
+    flex: 1;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: 'Noto Serif', serif;
+    font-size: 12px;
+    cursor: default;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.amove-chip:hover { background: var(--panel2); }
+
+/* Per-classification background tints */
+.amove-brilliant  { background: rgba(27,172,166,0.10); }
+.amove-inaccuracy { background: rgba(240,165,0,  0.08); }
+.amove-mistake    { background: rgba(224,112,0,  0.10); }
+.amove-blunder    { background: rgba(204, 68,68, 0.12); }

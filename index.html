@@ -87,7 +87,8 @@
         <div class="game-over-icon"   id="game-over-icon">🏆</div>
         <div class="game-over-result" id="game-over-result">White Wins!</div>
         <div class="game-over-reason" id="game-over-reason">by Checkmate</div>
-        <button class="btn btn-primary" onclick="game.newGame()">Play Again</button>
+        <button class="btn btn-primary"   onclick="game.newGame()" style="margin-bottom:8px">Play Again</button>
+        <button class="btn btn-secondary" onclick="startPostGameAnalysis()">Analyze Game</button>
     </div>
 </div>
 
@@ -99,9 +100,101 @@
     </div>
 </div>
 
+<!-- ===== Post-game analysis modal ===== -->
+<div class="promo-modal" id="analysis-modal">
+    <div class="promo-card analysis-card">
+
+        <h3 style="text-align:center;margin-bottom:18px;font-family:'Noto Serif',serif">
+            Game Analysis
+        </h3>
+
+        <!-- Two-column player stats -->
+        <div class="analysis-grid">
+
+            <!-- White -->
+            <div class="analysis-col">
+                <div class="analysis-player-header">
+                    <span class="analysis-avatar">♔</span>
+                    <span class="player-name">You (White)</span>
+                </div>
+                <div class="acc-score" id="w-acc">—</div>
+                <div class="acc-label">Accuracy</div>
+                <div class="acc-bar-track">
+                    <div class="acc-bar" id="w-acc-bar"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="class-badge" style="color:#cc4444">??</span>
+                    Blunders
+                    <b id="w-blunders">—</b>
+                </div>
+                <div class="stat-row">
+                    <span class="class-badge" style="color:#e07000">?</span>
+                    Mistakes
+                    <b id="w-mistakes">—</b>
+                </div>
+                <div class="stat-row">
+                    <span class="class-badge" style="color:#f0a500">?!</span>
+                    Inaccuracies
+                    <b id="w-inacc">—</b>
+                </div>
+            </div>
+
+            <div class="analysis-divider"></div>
+
+            <!-- Black -->
+            <div class="analysis-col">
+                <div class="analysis-player-header">
+                    <span class="analysis-avatar">♚</span>
+                    <span class="player-name">AI (Black)</span>
+                </div>
+                <div class="acc-score" id="b-acc">—</div>
+                <div class="acc-label">Accuracy</div>
+                <div class="acc-bar-track">
+                    <div class="acc-bar" id="b-acc-bar"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="class-badge" style="color:#cc4444">??</span>
+                    Blunders
+                    <b id="b-blunders">—</b>
+                </div>
+                <div class="stat-row">
+                    <span class="class-badge" style="color:#e07000">?</span>
+                    Mistakes
+                    <b id="b-mistakes">—</b>
+                </div>
+                <div class="stat-row">
+                    <span class="class-badge" style="color:#f0a500">?!</span>
+                    Inaccuracies
+                    <b id="b-inacc">—</b>
+                </div>
+            </div>
+
+        </div><!-- /analysis-grid -->
+
+        <!-- Legend -->
+        <div class="analysis-legend">
+            <span class="legend-item"><span style="color:#1baca6">!!</span> Brilliant</span>
+            <span class="legend-item"><span style="color:#7fa650">!</span> Good</span>
+            <span class="legend-item"><span style="color:#f0a500">?!</span> Inaccuracy</span>
+            <span class="legend-item"><span style="color:#e07000">?</span> Mistake</span>
+            <span class="legend-item"><span style="color:#cc4444">??</span> Blunder</span>
+        </div>
+
+        <!-- Move-by-move breakdown -->
+        <div class="move-list-title" style="margin-bottom:8px">Move by Move</div>
+        <div id="analysis-move-list" class="amove-list"></div>
+
+        <button class="btn btn-secondary"
+                style="width:100%;margin-top:16px"
+                onclick="closeAnalysis()">Close</button>
+
+    </div>
+</div>
+
 <!-- Scripts: AI must load before the game controller -->
 <script src="chess agents/optimized_minimax.js"></script>
 <script src="chess game/chessGame.js"></script>
+<script src="game_analyzer.js"></script>
 
 </body>
 </html>
